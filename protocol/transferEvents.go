@@ -18,34 +18,37 @@ func OpenFl(filePath string) *os.File {
 	return file
 }
 
-func SendFile(conn net.Conn, file *os.File) {
+func SendFile(conn net.Conn, path string) {
 
-	defer file.Close()
-
-	buf := make([]byte, 4096)
-	for {
-		//Read the data from the local file and write it to the network receiver. How much to read, how much to write
-		n, err := file.Read(buf)
-		if err != nil {
-			if err == io.EOF {
-				fmt.Printf("sending file completed \n")
-			} else {
-				fmt.Printf("file. Read() method execution error, error is:% v \n", err)
+	file := OpenFl(path)
+	fileInfo := CreatePath(path)
+	fileName := SendName(conn, fileInfo)
+	if fileName != "" {
+		buf := make([]byte, 4096)
+		for {
+			//Read the data from the local file and write it to the network receiver. How much to read, how much to write
+			n, err := file.Read(buf)
+			if err != nil {
+				if err == io.EOF {
+					fmt.Printf("sending file completed \n")
+				} else {
+					fmt.Printf("file. Read() method execution error, error is:% v \n", err)
+				}
+				return
 			}
-			return
+			//Write to network socket
+			conn.Write(buf[:n])
 		}
-		//Write to network socket
-		conn.Write(buf[:n])
 	}
 }
 
-func TransferFile(fileName string, connection net.Conn) {
+func TransferFile(fileName string, conn net.Conn) {
 	buf := make([]byte, 4096)
-	_, err := connection.Read(buf)
+	_, err := conn.Read(buf)
 	if err == nil {
 		fmt.Printf("Sending to respectively client\n")
 	}
-	defer connection.Close()
+	defer conn.Close()
 }
 
 func ReceiveFile(conn net.Conn, fileName string) {

@@ -13,16 +13,16 @@ func main() {
 	server := protocol.GetServer()
 	defer server.Close()
 	for {
-		connection, err := server.Accept()
-		defer connection.Close()
+		conn, err := server.Accept()
+		defer conn.Close()
 		if err != nil {
 			fmt.Println("Error accepting: ", err.Error())
 			os.Exit(1)
 		} else {
 			fmt.Println("client connected")
-			fileName := protocol.WriteName(connection)
-			protocol.ReceiveFile(connection, fileName)
-			//protocol.TransferFile(fileName, connection)
+			fileName := protocol.WriteName(conn)
+			protocol.ReceiveFile(conn, fileName)
+			//protocol.TransferFile(fileName, conn)
 		}
 	}
 }

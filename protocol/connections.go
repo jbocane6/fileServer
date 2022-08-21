@@ -1,15 +1,10 @@
 package protocol
 
 import (
+	"flag"
 	"fmt"
 	"net"
 	"os"
-)
-
-const (
-	SERVER_HOST = "localhost"
-	SERVER_PORT = "8000"
-	SERVER_TYPE = "tcp"
 )
 
 func GetServer() net.Listener {
@@ -25,12 +20,21 @@ func GetServer() net.Listener {
 }
 
 func GetClient() net.Conn {
-	//Initiate connection request actively
-	connection, err := net.Dial("tcp", "127.0.0.1:8000")
+	//Initiate conn request actively
+	conn, err := net.Dial(SERVER_TYPE, SERVER_HOST+":"+SERVER_PORT)
 	if err != nil {
 		fmt.Printf("net. Dial() function execution error, error is:% v \n", err)
 		os.Exit(1)
 	}
 
-	return connection
+	return conn
+}
+
+func SetFlag(length int, option []string) *int {
+	var channel int
+	mySet := flag.NewFlagSet("", flag.ExitOnError)
+	mySet.IntVar(&channel, "channel", 1, "Channel selected")
+	mySet.Parse(option[length-2:])
+	flag.Parse()
+	return &channel
 }

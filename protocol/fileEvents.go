@@ -16,15 +16,15 @@ func CreatePath(path string) os.FileInfo {
 	return fileInfo
 }
 
-func SendName(connection net.Conn, fileInfo os.FileInfo) string {
+func SendName(conn net.Conn, fileInfo os.FileInfo) string {
 	// Send file name to server
-	_, err := connection.Write([]byte(fileInfo.Name()))
+	_, err := conn.Write([]byte(fileInfo.Name()))
 
 	//Read server postback data
 	buf := make([]byte, 4096)
-	n, err := connection.Read(buf)
+	n, err := conn.Read(buf)
 	if err != nil {
-		fmt.Printf("connection.read (buf) method execution error, error is:% v \n", err)
+		fmt.Printf("conn.read (buf) method execution error, error is:% v \n", err)
 		os.Exit(1)
 	}
 	return string(buf[:n])

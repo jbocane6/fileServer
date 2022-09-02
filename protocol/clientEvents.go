@@ -24,8 +24,7 @@ func (client *Client) receive() {
 
 func StartReceiveMode(c string) {
 	ch, _ := strconv.Atoi(c)
-	fmt.Println("Starting client on channel ", c)
-	connection := GetClient()
+	connection := GetClient(c)
 	client := &Client{socket: connection, channel: ch}
 	connection.Write([]byte(c))
 	go client.receive()
@@ -37,9 +36,8 @@ func StartReceiveMode(c string) {
 }
 
 func StartSendMode(c []string) {
-	fmt.Println("Starting client on channel ", c[4])
 	message := make([]byte, 4096)
-	connection := GetClient()
+	connection := GetClient(c[4])
 	connection.Write([]byte(c[4] + "s"))
 	val, _ := connection.Read(message)
 	fmt.Println(string(message[:val]))

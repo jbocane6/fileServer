@@ -1,10 +1,13 @@
 package protocol
 
-import "net"
+import (
+	"net"
+	"time"
+)
 
 const (
 	SERVER_HOST = "localhost"
-	SERVER_PORT = "8080"
+	SERVER_PORT = ":8080"
 	SERVER_TYPE = "tcp"
 )
 
@@ -26,6 +29,6 @@ type Client struct {
 	data    chan []byte
 }
 
-type ActiveClient struct {
-	Conn net.Conn
+func Now() string {
+	return time.Now().Format("02/01/06 - 15:04")
 }

@@ -15,13 +15,23 @@ func SetFlag(length int, option []string) *int {
 	return &channel
 }
 
-func GetClient() net.Conn {
+func GetClient(c string) net.Conn {
+	fmt.Println("Starting client on channel ", c)
 	// Initiate conn request actively
-	conn, err := net.Dial(SERVER_TYPE, SERVER_HOST+":"+SERVER_PORT)
+	conn, err := net.Dial(SERVER_TYPE, SERVER_HOST+SERVER_PORT)
 	if err != nil {
 		fmt.Println(err)
 	}
 	// conn.Write([]byte(strconv.Itoa(channel)))
 
 	return conn
+}
+
+func GetServer() net.Listener {
+	fmt.Printf("%v Starting server...\n", Now())
+	listener, error := net.Listen(SERVER_TYPE, SERVER_HOST+SERVER_PORT)
+	if error != nil {
+		fmt.Println(error)
+	}
+	return listener
 }

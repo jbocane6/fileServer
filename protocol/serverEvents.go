@@ -2,6 +2,7 @@ package protocol
 
 import (
 	"fmt"
+	"io"
 	"strconv"
 )
 
@@ -17,7 +18,7 @@ func (manager *ClientManager) start() {
 				fmt.Println("A connection has terminated!")
 				delete(manager.clients, connection)
 			}
-		case message := <-manager.broadcast:
+		case message := <-manager.file:
 			for connection := range manager.clients {
 				select {
 				case connection.data <- message:
@@ -33,28 +34,45 @@ func (manager *ClientManager) start() {
 func (manager *ClientManager) receive(client *Client) {
 	for {
 		message := make([]byte, 4096)
-		length, err := client.socket.Read(message)
-		if err != nil {
-			manager.unregister <- client
-			client.socket.Close()
-			break
+		/*
+			//el error es aquí, está leyendo por partes
+			length, err := client.socket.Read(message)
+			if err != nil {
+				manager.unregister <- client
+				client.socket.Close()
+				break
+			}
+			if length > 0 {
+				fmt.Printf("%v RECEIVED: file from sender\n", Now())
+				manager.file <- message
+				manager.destiny <- client.channel
+			} */
+		fl := []byte{}
+		for {
+			_, err := client.socket.Read(message)
+			if err != nil {
+				if err != io.EOF {
+					client.socket.Close()
+					break
+				}
+				break
+			}
+			fl = append(fl, message...)
 		}
-		if length > 0 {
-			fmt.Printf("%v RECEIVED: %v from sender\n", Now(), string(message))
-			manager.broadcast <- message
-			manager.destiny <- client.channel
-		}
+		manager.file <- fl
+		manager.destiny <- client.channel
 	}
 }
 
 func (manager *ClientManager) send(client *Client) {
+	defer client.socket.Close()
 	for {
 		select {
 		case message, ok := <-client.data:
 			if !ok {
 				return
 			} else if client.channel == <-manager.destiny {
-				fmt.Printf("%v SENDING: %v to channel: %d\n", Now(), string(message), client.channel)
+				fmt.Printf("%v SENDING: file to channel: %d\n", Now(), client.channel)
 				client.socket.Write(message)
 			}
 		}
@@ -65,7 +83,7 @@ func StartServerMode() {
 	listener := GetServer()
 	manager := ClientManager{
 		clients:    make(map[*Client]bool),
-		broadcast:  make(chan []byte),
+		file:       make(chan []byte),
 		destiny:    make(chan int),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
@@ -78,17 +96,19 @@ func StartServerMode() {
 		}
 		message := make([]byte, 4096)
 		c, _ := connection.Read(message)
+		var l int
 		if c == 1 {
-			ch, _ := strconv.Atoi(string(message[:c]))
-			connection.Write([]byte("Server accepted connection"))
-			client := &Client{socket: connection, channel: ch, data: make(chan []byte)}
-			manager.register <- client
+			l = c
+		} else {
+			l = c - 1
+		}
+		ch, _ := strconv.Atoi(string(message[:l]))
+		connection.Write([]byte("Server accepted connection"))
+		client := &Client{socket: connection, channel: ch, data: make(chan []byte)}
+		manager.register <- client
+		if c == 1 {
 			go manager.send(client)
 		} else {
-			ch, _ := strconv.Atoi(string(message[:c-1]))
-			connection.Write([]byte("Server accepted connection"))
-			client := &Client{socket: connection, channel: ch, data: make(chan []byte)}
-			manager.register <- client
 			go manager.receive(client)
 		}
 	}

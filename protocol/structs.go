@@ -15,7 +15,7 @@ const (
 
 type ClientManager struct {
 	clients    map[*Client]bool
-	broadcast  chan []byte
+	file       chan []byte
 	destiny    chan int
 	register   chan *Client
 	unregister chan *Client

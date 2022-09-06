@@ -3,6 +3,7 @@ package protocol
 import (
 	"flag"
 	"fmt"
+	"io"
 	"net"
 )
 
@@ -15,7 +16,7 @@ func SetFlag(length int, option []string) *int {
 	return &channel
 }
 
-func GetClient(c string) net.Conn {
+func getClient(c string) net.Conn {
 	fmt.Println("Starting client on channel ", c)
 	// Initiate conn request actively
 	conn, err := net.Dial(SERVER_TYPE, SERVER_HOST+SERVER_PORT)
@@ -27,11 +28,27 @@ func GetClient(c string) net.Conn {
 	return conn
 }
 
-func GetServer() net.Listener {
+func getServer() net.Listener {
 	fmt.Printf("%v Starting server...\n", Now())
 	listener, error := net.Listen(SERVER_TYPE, SERVER_HOST+SERVER_PORT)
 	if error != nil {
 		fmt.Println(error)
 	}
 	return listener
+}
+
+func readMultipleBytes(connection net.Conn, message, fl []byte) []byte {
+	for {
+		_, err := connection.Read(message)
+		if err != nil {
+			if err == io.EOF {
+			} else {
+				connection.Close()
+				break
+			}
+			break
+		}
+		fl = append(fl, message...)
+	}
+	return fl
 }

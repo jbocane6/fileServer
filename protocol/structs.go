@@ -15,6 +15,7 @@ const (
 
 type ClientManager struct {
 	clients    map[*Client]bool
+	fileName   chan []byte
 	file       chan []byte
 	destiny    chan int
 	register   chan *Client

@@ -2,7 +2,6 @@ package protocol
 
 import (
 	"fmt"
-	"io"
 	"strconv"
 )
 
@@ -27,31 +26,22 @@ func (manager *ClientManager) start() {
 					delete(manager.clients, connection)
 				}
 			}
+		case message := <-manager.fileName:
+			fmt.Println("File name to share:", string(message))
 		}
 	}
 }
 
-func (manager *ClientManager) receive(client *Client) {
+func (manager *ClientManager) manageFile(client *Client) {
 	for {
 		message := make([]byte, 4096)
 		fl := []byte{}
-		for {
-			_, err := client.socket.Read(message)
-			if err != nil {
-				if err != io.EOF {
-					client.socket.Close()
-					break
-				}
-				break
-			}
-			fl = append(fl, message...)
-		}
-		manager.file <- fl
+		manager.file <- readMultipleBytes(client.socket, message, fl)
 		manager.destiny <- client.channel
 	}
 }
 
-func (manager *ClientManager) send(client *Client) {
+func (manager *ClientManager) SendFile(client *Client) {
 	defer client.socket.Close()
 	for {
 		select {
@@ -59,17 +49,18 @@ func (manager *ClientManager) send(client *Client) {
 			if !ok {
 				return
 			} else if client.channel == <-manager.destiny {
-				//fmt.Printf("%v SENDING: file to channel: %d\n", Now(), client.channel)
 				client.socket.Write(message)
 			}
+			fmt.Printf("%v SENDING: file to channel: %d\n", Now(), client.channel)
 		}
 	}
 }
 
 func StartServerMode() {
-	listener := GetServer()
+	listener := getServer()
 	manager := ClientManager{
 		clients:    make(map[*Client]bool),
+		fileName:   make(chan []byte),
 		file:       make(chan []byte),
 		destiny:    make(chan int),
 		register:   make(chan *Client),
@@ -83,14 +74,18 @@ func StartServerMode() {
 		}
 		message := make([]byte, 4096)
 		c, _ := connection.Read(message)
+		if c > 1 {
+			name := message[1:]
+			manager.fileName <- name
+		}
 		ch, _ := strconv.Atoi(string(message[:1]))
 		connection.Write([]byte("Server accepted connection"))
 		client := &Client{socket: connection, channel: ch, data: make(chan []byte)}
 		manager.register <- client
 		if c == 1 {
-			go manager.send(client)
+			go manager.SendFile(client)
 		} else {
-			go manager.receive(client)
+			go manager.manageFile(client)
 		}
 	}
 }

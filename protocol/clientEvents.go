@@ -3,7 +3,6 @@ package protocol
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -19,19 +18,7 @@ func (client *Client) receive() {
 		}
 		fl := []byte{}
 		if length > 0 {
-			for {
-				_, err := client.socket.Read(message)
-				if err != nil {
-					if err == io.EOF {
-					} else {
-						client.socket.Close()
-						break
-					}
-					break
-				}
-				fl = append(fl, message...)
-			}
-			os.WriteFile("fakego.png", fl, 0333)
+			os.WriteFile("fakego.png", readMultipleBytes(client.socket, message, fl), 0333)
 		}
 	}
 
@@ -40,8 +27,8 @@ func (client *Client) receive() {
 func StartReceiveMode(c string) {
 	ch, _ := strconv.Atoi(c)
 
-	connection := GetClient(c)
-	client := &Client{socket: connection, channel: ch}
+	connection := getClient(c)
+	client := &Client{socket: connection, channel: ch, data: make(chan []byte)}
 	connection.Write([]byte(c))
 
 	go client.receive()
@@ -53,24 +40,27 @@ func StartReceiveMode(c string) {
 	}
 }
 
-func StartSendMode(c []string) {
+func StartSendMode(c, path string) {
 	message := make([]byte, 4096)
 
-	connection := GetClient(c[4])
-	/* fileInfo, err := os.Stat(c[2])
-	if err != nil {
-		fmt.Printf("OS. Stat() function execution error, error is:% v \n", err)
-		os.Exit(1)
-	}
-	fileName := fileInfo.Name()
-	connection.Write([]byte(c[4] + fileName)) */
-	connection.Write([]byte(c[4] + "s"))
+	connection := getClient(c)
+	connection.Write([]byte(c + fileName(path)))
+	//connection.Write([]byte(c[4] + "s"))
 
 	val, _ := connection.Read(message)
 	fmt.Println(string(message[:val]))
 
 	// start sending file
-	wholeFile, _ := os.ReadFile(c[2])
+	wholeFile, _ := os.ReadFile(path)
 	connection.Write(wholeFile)
 	// start sending file
+}
+
+func fileName(path string) string {
+	fileInfo, err := os.Stat(path)
+	if err != nil {
+		fmt.Printf("OS. Stat() function execution error, error is:% v \n", err)
+		os.Exit(1)
+	}
+	return fileInfo.Name()
 }

@@ -4,6 +4,7 @@ import (
 	p "fileServer/protocol"
 	"fmt"
 	"os"
+	"strconv"
 )
 
 func main() {
@@ -16,13 +17,14 @@ func main() {
 			fmt.Printf("Format: ./client send [path/filename] -channel [channel number]\n")
 			return
 		}
-		p.StartSendMode(option)
+		ch := *p.SetFlag(len(option), option)
+		p.StartSendMode(strconv.Itoa(ch), option[2])
 	case "receive":
 		if len(option) != 4 {
 			fmt.Printf("Format: ./client receive -channel [channel number]\n")
 			return
 		}
-		p.StartReceiveMode(option[3])
+		ch := *p.SetFlag(len(option), option)
+		p.StartReceiveMode(strconv.Itoa(ch))
 	}
-
 }

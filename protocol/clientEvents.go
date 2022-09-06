@@ -69,11 +69,6 @@ func StartSendMode(c []string) {
 	val, _ := connection.Read(message)
 	fmt.Println(string(message[:val]))
 
-	// start sending message
-	/* connection.Write([]byte(c[2]))
-	fmt.Println("Sending message: ", c[2]) */
-	// end sending message
-
 	// start sending file
 	wholeFile, _ := os.ReadFile(c[2])
 	connection.Write(wholeFile)

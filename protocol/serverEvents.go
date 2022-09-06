@@ -34,19 +34,6 @@ func (manager *ClientManager) start() {
 func (manager *ClientManager) receive(client *Client) {
 	for {
 		message := make([]byte, 4096)
-		/*
-			//el error es aquí, está leyendo por partes
-			length, err := client.socket.Read(message)
-			if err != nil {
-				manager.unregister <- client
-				client.socket.Close()
-				break
-			}
-			if length > 0 {
-				fmt.Printf("%v RECEIVED: file from sender\n", Now())
-				manager.file <- message
-				manager.destiny <- client.channel
-			} */
 		fl := []byte{}
 		for {
 			_, err := client.socket.Read(message)
@@ -72,7 +59,7 @@ func (manager *ClientManager) send(client *Client) {
 			if !ok {
 				return
 			} else if client.channel == <-manager.destiny {
-				fmt.Printf("%v SENDING: file to channel: %d\n", Now(), client.channel)
+				//fmt.Printf("%v SENDING: file to channel: %d\n", Now(), client.channel)
 				client.socket.Write(message)
 			}
 		}
@@ -96,13 +83,7 @@ func StartServerMode() {
 		}
 		message := make([]byte, 4096)
 		c, _ := connection.Read(message)
-		var l int
-		if c == 1 {
-			l = c
-		} else {
-			l = c - 1
-		}
-		ch, _ := strconv.Atoi(string(message[:l]))
+		ch, _ := strconv.Atoi(string(message[:1]))
 		connection.Write([]byte("Server accepted connection"))
 		client := &Client{socket: connection, channel: ch, data: make(chan []byte)}
 		manager.register <- client

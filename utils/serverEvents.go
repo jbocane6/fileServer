@@ -12,15 +12,18 @@ import (
 func (manager *ClientManager) start() {
 	for {
 		select {
+		// Stores new connected client
 		case connection := <-manager.register:
 			manager.clients[connection] = true
-			fmt.Println("Added new connection!")
+			fmt.Printf(NewConn, Now(), connection.channel)
+		// Removes disconnected client
 		case connection := <-manager.unregister:
 			if _, ok := manager.clients[connection]; ok {
 				close(connection.data)
+				fmt.Printf(EndConn, Now())
 				delete(manager.clients, connection)
-				fmt.Println("A connection has terminated!")
 			}
+		// Stores content of file in clients with compatible channel
 		case message := <-manager.file:
 			for connection := range manager.clients {
 				select {
@@ -35,20 +38,18 @@ func (manager *ClientManager) start() {
 }
 
 func (manager *ClientManager) receive(client *Client) {
-	defer client.socket.Close()
 	for {
 		client.socket.SetReadDeadline(time.Now().Add(time.Second * 30))
 
-		channel, _, _ := getNameorChannel(client.socket)
-		ch, _ := strconv.Atoi(channel.String())
-		client.channel = ch
-
 		filename, filenameSize, bytesRead := getNameorChannel(client.socket)
-		fmt.Printf("Expected %d bytes for filename, read %d bytes\n", filenameSize, bytesRead)
+		fmt.Printf(ExpectedFilename, filenameSize, bytesRead)
 
 		file := getFile(client.socket)
 		//fmt.Println("RECEIVED: " + string(message))
-		manager.file <- filename.String() + "/godata/" + file.String()
+		manager.file <- filename.String() + GoData + file.String()
+		manager.destiny <- client.channel
+		/* manager.unregister <- client
+		client.socket.Close() */
 	}
 }
 
@@ -59,21 +60,23 @@ func (manager *ClientManager) send(client *Client) {
 		case message, ok := <-client.data:
 			if !ok {
 				return
+			} else if client.channel == <-manager.destiny {
+				file := strings.Split(message, GoData)
+				fileName, fileData := file[0], file[1]
+				sendFileName(client.socket, fileName)
+
+				filesize := int64(len(fileData))
+				err := binary.Write(client.socket, binary.LittleEndian, filesize)
+				check(err)
+
+				bytesWritten, err := io.WriteString(client.socket, fileData)
+				check(err)
+				compare(int64(bytesWritten), int64(len(fileData)), filesize)
+
+				/* manager.unregister <- client
+				client.socket.Close() */
 			}
-
-			file := strings.Split(message, "/godata/")
-			fileName, fileData := file[0], file[1]
-			sendFileName(client.socket, fileName)
-
-			filesize := int64(len(fileData))
-			err := binary.Write(client.socket, binary.LittleEndian, filesize)
-			check(err)
-
-			bytesWritten, err := io.WriteString(client.socket, fileData)
-			check(err)
-			compare(int64(bytesWritten), int64(len(fileData)), filesize)
 		}
-
 	}
 }
 
@@ -93,13 +96,23 @@ func StartServerMode() {
 	go manager.start()
 
 	for {
-		connection, err := listener.Accept()
+		listener, err := listener.Accept()
 		check(err)
 
-		client := &Client{socket: connection, channel: 0, data: make(chan string)}
+		channel, _, _ := getNameorChannel(listener)
+		ch := channel.String()
+		op := ch[1:]
+		intch, err := strconv.Atoi(ch[:1])
+		check(err)
+		fmt.Println(op)
+
+		client := &Client{socket: listener, channel: intch, data: make(chan string)}
 
 		manager.register <- client
-		go manager.receive(client)
-		go manager.send(client)
+		if op == "send" {
+			go manager.receive(client)
+		} else {
+			go manager.send(client)
+		}
 	}
 }

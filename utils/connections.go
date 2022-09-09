@@ -22,7 +22,7 @@ func SetFlag(length int, option []string) *int {
 }
 
 func getClient(c string) net.Conn {
-	fmt.Println("Starting client on channel", c)
+	fmt.Printf(StartClient, Now(), c)
 	// Initiate conn request actively
 	conn, err := net.Dial(SERVER_TYPE, SERVER_HOST+SERVER_PORT)
 	check(err)
@@ -31,7 +31,8 @@ func getClient(c string) net.Conn {
 }
 
 func getServer() net.Listener {
-	fmt.Printf("%v Starting server...\n", Now())
+	fmt.Printf(StartServer, Now())
+	// Initiate conn listener
 	listener, err := net.Listen(SERVER_TYPE, SERVER_HOST+SERVER_PORT)
 	check(err)
 	return listener

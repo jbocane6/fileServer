@@ -14,19 +14,21 @@ func main() {
 	switch option[1] {
 	case "send":
 		if len(option) != 5 {
-			fmt.Printf("Format: ./client send [path/filename] -channel [channel number]\n")
+			fmt.Printf(u.FormatSend)
 			return
 		}
+		// Set channel flag
 		ch := *u.SetFlag(len(option), option)
-		//u.StartClientMode(strconv.Itoa(ch))
+		// Start send file mode
 		u.StartSendMode(strconv.Itoa(ch), option[2])
 	case "receive":
 		if len(option) != 4 {
-			fmt.Printf("Format: ./client receive -channel [channel number]\n")
+			fmt.Printf(u.FormatReceive)
 			return
 		}
+		// Set channel flag
 		ch := *u.SetFlag(len(option), option)
-		//u.StartClientMode(strconv.Itoa(ch))
+		// Start receive file mode
 		u.StartReceiveMode(strconv.Itoa(ch))
 	}
 }

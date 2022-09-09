@@ -52,7 +52,10 @@ func StartReceiveMode(c string) {
 	connection := getClient(c)
 	defer connection.Close()
 
+	// Initialize client with connection and channel, waiting for data
 	client := &Client{socket: connection, channel: ch, data: make(chan string)}
+	// Send channel to server
+	sendChannel(client.socket, c+"receive")
 
 	/* go client.receive()
 
@@ -61,20 +64,22 @@ func StartReceiveMode(c string) {
 		message, _ := reader.ReadString('\n')
 		connection.Write([]byte(strings.TrimRight(message, "\n")))
 	} */
+
+	// Set deadline for reading
 	client.socket.SetReadDeadline(time.Now().Add(time.Second * 30))
+	// Get filename, first size of bytes and then name
+	fileName, fileNameSize, bytesRead := getNameorChannel(client.socket)
+	fmt.Printf(ExpectedFilename, fileNameSize, bytesRead)
 
-	filename, filenameSize, bytesRead := getNameorChannel(client.socket)
-	fmt.Printf("Expected %d bytes for filename, read %d bytes\n", filenameSize, bytesRead)
+	str := fileName.String()
 
-	str := filename.String()
-
-	//read an store size of file
+	// Get file size
 	var fileSize int64
 	err := binary.Read(client.socket, binary.LittleEndian, &fileSize)
 	check(err)
-	fmt.Printf("Expecting %d bytes in file\n", fileSize)
+	fmt.Printf(ExpectingFile, fileSize)
 
-	//create file
+	// Create file using connection, file name and file size
 	createFile(client.socket, str, fileSize)
 }
 
@@ -84,10 +89,11 @@ func StartSendMode(c, path string) {
 
 	connection := getClient(c)
 	defer connection.Close()
-
+	// Initialize client with connection and channel, waiting for data
 	client := &Client{socket: connection, channel: ch, data: make(chan string)}
 
-	sendChannel(client.socket, client.channel)
+	// Send channel to server
+	sendChannel(client.socket, c+"send")
 
 	/* for {
 		reader := bufio.NewReader(os.Stdin)
@@ -95,11 +101,11 @@ func StartSendMode(c, path string) {
 		check(err)
 	} */
 
+	// Get file name
 	fileInfo, err := os.Stat(strings.TrimSpace(path))
 	check(err)
 	fileName := fileInfo.Name()
 
 	sendFileName(client.socket, fileName)
 	sendFile(client.socket, path)
-
 }

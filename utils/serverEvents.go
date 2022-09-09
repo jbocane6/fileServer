@@ -1,10 +1,10 @@
 package utils
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -39,31 +39,14 @@ func (manager *ClientManager) receive(client *Client) {
 	for {
 		client.socket.SetReadDeadline(time.Now().Add(time.Second * 30))
 
-		//read an store size of filename
-		var filenameSize int64 //size of fileName
-		err := binary.Read(client.socket, binary.LittleEndian, &filenameSize)
-		check(err)
+		channel, _, _ := getNameorChannel(client.socket)
+		ch, _ := strconv.Atoi(channel.String())
+		client.channel = ch
 
-		//create and fill filename buffer with max size filenamesize
-		filename := bytes.NewBuffer(make([]byte, 0, filenameSize)) // filename will be a slice of bytes that store the fileName
-		//copy and store amount of bytes of filename
-		bytesRead, err := io.CopyN(filename, client.socket, filenameSize) //bytes fileName
-		check(err)
+		filename, filenameSize, bytesRead := getNameorChannel(client.socket)
 		fmt.Printf("Expected %d bytes for filename, read %d bytes\n", filenameSize, bytesRead)
 
-		/* str := strings.TrimLeft(filename.String(), " ")
-		fmt.Println(str) */
-
-		//read an store size of file
-		var filesize int64 //size of file
-		err = binary.Read(client.socket, binary.LittleEndian, &filesize)
-		check(err)
-		//fmt.Printf("Expecting %d bytes in file\n", filesize)
-
-		file := bytes.NewBuffer(make([]byte, 0, filesize))
-		bytesFile, err := io.CopyN(file, client.socket, filesize)
-		check(err)
-		fmt.Printf("Expected %d bytes for file, read %d bytes\n", filesize, bytesFile)
+		file := getFile(client.socket)
 		//fmt.Println("RECEIVED: " + string(message))
 		manager.file <- filename.String() + "/godata/" + file.String()
 	}
@@ -77,31 +60,18 @@ func (manager *ClientManager) send(client *Client) {
 			if !ok {
 				return
 			}
-			//client.socket.Write(message)
-			fmt.Println(len(message))
+
 			file := strings.Split(message, "/godata/")
-			fileName := file[0]
-			fileData := file[1]
-			length := int64(len(fileName))
-			err := binary.Write(client.socket, binary.LittleEndian, length)
-			check(err)
+			fileName, fileData := file[0], file[1]
+			sendFileName(client.socket, fileName)
 
-			bytes, err := io.WriteString(client.socket, fileName)
-			check(err)
-			if bytes != len(fileName) {
-				fmt.Printf("Error! Wrote %d bytes but length of name is %d!\n", bytes, length)
-
-			}
-
-			filesize := int64(len(file[1]))
-			err = binary.Write(client.socket, binary.LittleEndian, filesize)
+			filesize := int64(len(fileData))
+			err := binary.Write(client.socket, binary.LittleEndian, filesize)
 			check(err)
 
 			bytesWritten, err := io.WriteString(client.socket, fileData)
 			check(err)
-			if bytesWritten != int(filesize) {
-				fmt.Printf("Error! Wrote %d bytes but length of file is %d!\n", bytesWritten, filesize)
-			}
+			compare(int64(bytesWritten), int64(len(fileData)), filesize)
 		}
 
 	}
@@ -125,7 +95,9 @@ func StartServerMode() {
 	for {
 		connection, err := listener.Accept()
 		check(err)
-		client := &Client{socket: connection, data: make(chan string)}
+
+		client := &Client{socket: connection, channel: 0, data: make(chan string)}
+
 		manager.register <- client
 		go manager.receive(client)
 		go manager.send(client)

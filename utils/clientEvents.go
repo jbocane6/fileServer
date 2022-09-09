@@ -1,18 +1,15 @@
 package utils
 
 import (
-	"bufio"
-	"bytes"
 	"encoding/binary"
 	"fmt"
-	"io"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 )
 
-func (client *Client) receive() {
+/* func (client *Client) receive() {
 	for {
 		client.socket.SetReadDeadline(time.Now().Add(time.Second * 30))
 
@@ -42,12 +39,12 @@ func (client *Client) receive() {
 		check(err)
 		bytesWritten, err := io.CopyN(f, client.socket, filesize)
 		check(err)
-		fmt.Printf("Transfer complete, expected %d bytes, wrote %d bytes", filesize, bytesWritten)
+		fmt.Printf("Transfer complete, expected %d bytes, wrote %d bytes\n", filesize, bytesWritten)
 		if filesize != bytesWritten {
-			fmt.Printf("ERROR! File doesn't match expected size!")
+			fmt.Printf("ERROR! File doesn't match expected size!"<\n)
 		}
 	}
-}
+} */
 
 func StartReceiveMode(c string) {
 	ch, _ := strconv.Atoi(c)
@@ -56,58 +53,53 @@ func StartReceiveMode(c string) {
 	defer connection.Close()
 
 	client := &Client{socket: connection, channel: ch, data: make(chan string)}
-	//connection.Write([]byte(c))
 
-	go client.receive()
+	/* go client.receive()
 
 	for {
 		reader := bufio.NewReader(os.Stdin)
 		message, _ := reader.ReadString('\n')
 		connection.Write([]byte(strings.TrimRight(message, "\n")))
-	}
+	} */
+	client.socket.SetReadDeadline(time.Now().Add(time.Second * 30))
+
+	filename, filenameSize, bytesRead := getNameorChannel(client.socket)
+	fmt.Printf("Expected %d bytes for filename, read %d bytes\n", filenameSize, bytesRead)
+
+	str := filename.String()
+
+	//read an store size of file
+	var fileSize int64
+	err := binary.Read(client.socket, binary.LittleEndian, &fileSize)
+	check(err)
+	fmt.Printf("Expecting %d bytes in file\n", fileSize)
+
+	//create file
+	createFile(client.socket, str, fileSize)
 }
 
 func StartSendMode(c, path string) {
-	ch, _ := strconv.Atoi(c)
+	ch, err := strconv.Atoi(c)
+	check(err)
 
 	connection := getClient(c)
 	defer connection.Close()
 
 	client := &Client{socket: connection, channel: ch, data: make(chan string)}
 
-	for {
+	sendChannel(client.socket, client.channel)
+
+	/* for {
 		reader := bufio.NewReader(os.Stdin)
 		message, err := reader.ReadString('\n')
 		check(err)
+	} */
 
-		fileInfo, err := os.Stat(strings.TrimSpace(message))
-		check(err)
-		fileName := fileInfo.Name()
+	fileInfo, err := os.Stat(strings.TrimSpace(path))
+	check(err)
+	fileName := fileInfo.Name()
 
-		length := int64(len(fileName))
-		err = binary.Write(client.socket, binary.LittleEndian, length)
-		check(err)
+	sendFileName(client.socket, fileName)
+	sendFile(client.socket, path)
 
-		bytes, err := io.WriteString(client.socket, fileName)
-		check(err)
-		if bytes != len(fileName) {
-			fmt.Printf("Error! Wrote %d bytes but length of name is %d!\n", bytes, length)
-		}
-
-		f, err := os.Open(strings.TrimSpace(message))
-		check(err)
-
-		stat, err := f.Stat()
-		check(err)
-
-		filesize := stat.Size()
-		err = binary.Write(client.socket, binary.LittleEndian, filesize)
-		check(err)
-
-		bytesWritten, err := io.CopyN(client.socket, f, filesize)
-		check(err)
-		if bytesWritten != filesize {
-			fmt.Printf("Error! Wrote %d bytes but length of file is %d!\n", bytes, stat.Size())
-		}
-	}
 }

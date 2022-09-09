@@ -1,16 +1,7 @@
 package main
 
-import (
-	p "fileServer/protocol"
-)
+import u "fileServer/utils"
 
 func main() {
-	p.StartServerMode()
-	/* flagMode := flag.String("mode", "server", "start in client or server mode")
-	flag.Parse()
-	if strings.ToLower(*flagMode) == "server" {
-		startServerMode()
-	} else {
-		startClientMode()
-	} */
+	u.StartServerMode()
 }

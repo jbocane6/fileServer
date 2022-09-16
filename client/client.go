@@ -30,5 +30,14 @@ func main() {
 		ch := *u.SetFlag(len(option), option)
 		// Start receive file mode
 		u.StartReceiveMode(strconv.Itoa(ch))
+	case "subscribe":
+		if len(option) != 4 {
+			fmt.Printf(u.FormatReceive)
+			return
+		}
+		// Set channel flag
+		ch := *u.SetFlag(len(option), option)
+		// Start receive file mode
+		u.Subscribe(strconv.Itoa(ch))
 	}
 }

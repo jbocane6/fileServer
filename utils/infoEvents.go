@@ -23,8 +23,8 @@ func getNameorChannel(socket net.Conn) (*bytes.Buffer, int64, int64) {
 
 	// Get the size of the file name or the channel name
 	var size int64
-	err := binary.Read(socket, binary.LittleEndian, &size)
-	check(err)
+	binary.Read(socket, binary.LittleEndian, &size)
+	//check(err)
 
 	// Get the content of the file name or the channel name
 	data := bytes.NewBuffer(make([]byte, 0, size))

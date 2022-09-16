@@ -14,7 +14,7 @@ type Client struct {
 type ClientManager struct {
 	clients    map[*Client]bool
 	file       chan string
-	destiny    chan int
+	destiny    int
 	register   chan *Client
 	unregister chan *Client
 }

@@ -19,9 +19,7 @@ func createFile(socket net.Conn, str string, fileSize int64) {
 	bytesWritten, err := io.CopyN(f, socket, fileSize)
 	check(err)
 	fmt.Printf(MsgTransfer, Now(), fileSize, bytesWritten)
-	if fileSize != bytesWritten {
-		fmt.Println(ErrFileSize)
-	}
+	compareSizeWitten(fileSize, bytesWritten)
 }
 
 func sendFile(socket net.Conn, path string) {
@@ -43,6 +41,7 @@ func sendFile(socket net.Conn, path string) {
 	bytesWritten, err := io.CopyN(socket, f, filesize)
 	check(err)
 	compare(bytesWritten, filesize, stat.Size())
+	fmt.Printf(ExpectedWrite, filesize, bytesWritten)
 }
 
 func getFile(socket net.Conn) *bytes.Buffer {

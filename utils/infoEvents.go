@@ -3,12 +3,12 @@ package utils
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"io"
 	"net"
 )
 
 func sendChannel(socket net.Conn, channel string) {
-	//ch := strconv.Itoa(channel)
 	// Writes channel length into socket
 	err := binary.Write(socket, binary.LittleEndian, int64(len(channel)))
 	check(err)
@@ -18,13 +18,12 @@ func sendChannel(socket net.Conn, channel string) {
 	check(err)
 }
 
+// Get the file name or channel and return value, size and bytes read
 func getNameorChannel(socket net.Conn) (*bytes.Buffer, int64, int64) {
-	// Get the file name or channel and return value, size and bytes read
 
 	// Get the size of the file name or the channel name
 	var size int64
 	binary.Read(socket, binary.LittleEndian, &size)
-	//check(err)
 
 	// Get the content of the file name or the channel name
 	data := bytes.NewBuffer(make([]byte, 0, size))
@@ -45,4 +44,5 @@ func sendFileName(socket net.Conn, fileName string) {
 	bytes, err := io.WriteString(socket, fileName)
 	check(err)
 	compare(int64(bytes), int64(len(fileName)), length)
+	fmt.Printf(ExpectedWriteName, length, bytes)
 }
